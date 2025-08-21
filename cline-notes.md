@@ -1,0 +1,4 @@
+- Do NOT add eslint-plugin-tailwindcss (v3-only; conflicts with TW v4).
+- Tailwind v4 (no eslint-plugin-tailwindcss).
+- Use @supabase/ssr with async cookies() (Next 15).
+- Await params in dynamic routes where needed.
