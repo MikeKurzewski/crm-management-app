@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Topbar from "@/components/shell/Topbar";
 import Sidebar from "@/components/shell/Sidebar";
+import { ThemeProvider } from "@/components/theme-provider";
 // import NewOrgForm from "@/components/NewOrgForm";
 
 /**
@@ -39,13 +40,22 @@ export default async function DashboardAppLayout({
   // If no orgs, show empty state (e.g., NewOrgForm)
   if (!orgs.length) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <Topbar />
-        <main className="flex-1 flex items-center justify-center">
-          {/* <NewOrgForm /> */}
-          <div className="text-muted-foreground">No organizations found. NewOrgForm coming soon.</div>
-        </main>
-      </div>
+      <ThemeProvider>
+        <div className="min-h-screen flex flex-col">
+          <Topbar />
+          <main className="flex-1 flex items-center justify-center">
+            {/* <NewOrgForm /> */}
+            <div className="w-full max-w-md">
+              <div className="rounded-lg shadow border bg-background p-6 flex flex-col items-center justify-center" role="status" aria-label="No organizations">
+                <span className="text-2xl mb-2">🏢</span>
+                <h2 className="text-lg font-semibold mb-1">No organizations found</h2>
+                <p className="text-muted-foreground mb-2 text-center">You have not created or joined any organizations yet.</p>
+                <span className="text-xs text-muted-foreground">NewOrgForm coming soon.</span>
+              </div>
+            </div>
+          </main>
+        </div>
+      </ThemeProvider>
     );
   }
 
@@ -54,12 +64,14 @@ export default async function DashboardAppLayout({
   const activeOrgId = orgs[0]?.id;
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Topbar />
-      <div className="flex flex-1">
-        <Sidebar orgs={orgs} activeOrgId={activeOrgId} profile={profile || {}} />
-        <main className="flex-1 bg-background">{children}</main>
+    <ThemeProvider>
+      <div className="min-h-screen flex flex-col">
+        <Topbar />
+        <div className="flex flex-1">
+          <Sidebar orgs={orgs} activeOrgId={activeOrgId} profile={profile || {}} />
+          <main className="flex-1 bg-background">{children}</main>
+        </div>
       </div>
-    </div>
+    </ThemeProvider>
   );
 }

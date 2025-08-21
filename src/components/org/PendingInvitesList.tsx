@@ -3,6 +3,16 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableCaption } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 type Invite = {
   token: string;
@@ -48,6 +58,25 @@ export default function PendingInvitesList({ orgId }: { orgId: string }) {
     }
   };
 
+  const handleCancel = async (token: string) => {
+    try {
+      const res = await fetch(`/api/orgs/${orgId}/invites`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+      if (res.ok) {
+        toast.success("Invite cancelled");
+        fetchInvites();
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Failed to cancel invite");
+      }
+    } catch {
+      toast.error("Network error");
+    }
+  };
+
   return (
     <div className="mt-8">
       <div className="flex items-center gap-2 mb-2">
@@ -56,46 +85,92 @@ export default function PendingInvitesList({ orgId }: { orgId: string }) {
           Refresh
         </Button>
       </div>
-      {loading ? (
-        <div className="text-muted-foreground">Loading invites...</div>
-      ) : invites.length === 0 ? (
-        <div className="text-muted-foreground">No pending invites.</div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full border text-sm">
-            <thead>
-              <tr className="bg-muted">
-                <th className="p-2 text-left">Email</th>
-                <th className="p-2 text-left">Role</th>
-                <th className="p-2 text-left">Created</th>
-                <th className="p-2 text-left">Expires</th>
-                <th className="p-2 text-left">Link</th>
-              </tr>
-            </thead>
-            <tbody>
-              {invites.map((invite) => (
-                <tr key={invite.token} className="border-t">
-                  <td className="p-2">{invite.email}</td>
-                  <td className="p-2">{invite.role}</td>
-                  <td className="p-2">{invite.created_at ? new Date(invite.created_at).toLocaleString() : ""}</td>
-                  <td className="p-2">{invite.expires_at ? new Date(invite.expires_at).toLocaleString() : "—"}</td>
-                  <td className="p-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleCopy(invite.joinUrl)}
-                      aria-label={`Copy invite link for ${invite.email}`}
-                    >
-                      Copy
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <div className="overflow-x-auto">
+        <Table>
+          <TableCaption>Pending organization invites</TableCaption>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Email</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Created</TableHead>
+              <TableHead>Expires</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading
+              ? Array.from({ length: 3 }).map((_, i) => (
+                  <TableRow key={`skeleton-${i}`}>
+                    <TableCell>
+                      <Skeleton className="h-4 w-32" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-20" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-28" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-28" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-8 w-16" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              : invites.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground">
+                      No pending invites.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  invites.map((invite) => (
+                    <TableRow key={invite.token}>
+                      <TableCell>{invite.email}</TableCell>
+                      <TableCell>
+                        <Badge variant={invite.role === "admin" ? "default" : "secondary"}>
+                          {invite.role.charAt(0).toUpperCase() + invite.role.slice(1)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {invite.created_at ? new Date(invite.created_at).toLocaleString() : ""}
+                      </TableCell>
+                      <TableCell>
+                        {invite.expires_at ? new Date(invite.expires_at).toLocaleString() : "—"}
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              aria-label={`Invite actions for ${invite.email}`}
+                            >
+                              Actions
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleCopy(invite.joinUrl)}>
+                              Copy invite link
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => handleCancel(invite.token)}
+                              className="text-red-600"
+                            >
+                              Cancel invite
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }

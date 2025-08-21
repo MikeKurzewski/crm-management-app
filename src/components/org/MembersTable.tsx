@@ -1,10 +1,13 @@
 "use client";
 
 import React from "react";
-import { Select, SelectItem } from "@/components/ui/select";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableCaption } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type Member = {
   user_id: string;
@@ -46,12 +49,13 @@ export default function MembersTable({
     }
   };
 
- React.useEffect(() => {
-  if (!initial || initial.length === 0) {
-    fetchMembers();
-  }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [orgId]);
+  React.useEffect(() => {
+    if (!initial || initial.length === 0) {
+      fetchMembers();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orgId]);
+
   // Count admins for self-demotion prevention
   const adminCount = members.filter((m) => m.role === "admin").length;
 
@@ -89,53 +93,80 @@ export default function MembersTable({
         </Button>
       </div>
       <div className="overflow-x-auto">
-        <table className="min-w-full border text-sm">
-          <thead>
-            <tr className="bg-muted">
-              <th className="p-2 text-left">Name</th>
-              <th className="p-2 text-left">Email</th>
-              <th className="p-2 text-left">Role</th>
-            </tr>
-          </thead>
-          <tbody>
-            {members.map((m) => {
-              const isSelf = m.user_id === currentUserId;
-              const isOnlyAdmin = isSelf && m.role === "admin" && adminCount === 1;
-              return (
-                <tr key={m.user_id} className="border-t">
-                  <td className="p-2 flex items-center gap-2">
-                    <Avatar src={m.avatar_url} alt={m.display_name} />
-                    {m.display_name}
-                  </td>
-                  <td className="p-2">{m.email}</td>
-                  <td className="p-2">
-                    {isAdmin ? (
-                      <select
-                        value={m.role}
-                        onChange={(e) =>
-                          handleRoleChange(m.user_id, e.target.value as "admin" | "member")
-                        }
-                        disabled={isOnlyAdmin}
-                        aria-label={`Change role for ${m.display_name}`}
-                        className="w-[160px] rounded-md border px-2 py-1 text-sm"
-                      >
-                        <option value="admin">Admin</option>
-                        <option value="member">Member</option>
-                      </select>
-
-
-                    ) : (
-                      <span>{m.role}</span>
-                    )}
-                    {isOnlyAdmin && (
-                      <span className="text-xs text-red-500 ml-2">(last admin)</span>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <Table>
+          <TableCaption>Organization members and their roles</TableCaption>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Role</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading
+              ? Array.from({ length: 3 }).map((_, i) => (
+                  <TableRow key={`skeleton-${i}`}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="h-8 w-8 rounded-full" />
+                        <Skeleton className="h-4 w-24" />
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-32" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-20" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              : members.map((m) => {
+                  const isSelf = m.user_id === currentUserId;
+                  const isOnlyAdmin = isSelf && m.role === "admin" && adminCount === 1;
+                  return (
+                    <TableRow key={m.user_id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Avatar src={m.avatar_url} alt={m.display_name} />
+                          {m.display_name}
+                        </div>
+                      </TableCell>
+                      <TableCell>{m.email}</TableCell>
+                      <TableCell>
+                        {isAdmin ? (
+                          <Select
+                            value={m.role}
+                            onValueChange={(value) =>
+                              handleRoleChange(m.user_id, value as "admin" | "member")
+                            }
+                            disabled={isOnlyAdmin}
+                          >
+                            <SelectTrigger aria-label={`Change role for ${m.display_name}`} className="w-[160px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="admin">
+                                <Badge variant="default" className="mr-2">Admin</Badge>
+                              </SelectItem>
+                              <SelectItem value="member">
+                                <Badge variant="secondary" className="mr-2">Member</Badge>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Badge variant={m.role === "admin" ? "default" : "secondary"}>
+                            {m.role.charAt(0).toUpperCase() + m.role.slice(1)}
+                          </Badge>
+                        )}
+                        {isOnlyAdmin && (
+                          <span className="text-xs text-red-500 ml-2">(last admin)</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+          </TableBody>
+        </Table>
       </div>
     </div>
   );
