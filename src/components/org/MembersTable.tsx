@@ -141,9 +141,9 @@ export default function MembersTable({
                             }
                             disabled={isOnlyAdmin}
                           >
-                            <SelectTrigger aria-label={`Change role for ${m.display_name}`} className="w-[160px]">
-                              <SelectValue />
-                            </SelectTrigger>
+<SelectTrigger aria-label={`Change role for ${m.display_name}`} className="w-[160px]">
+  <SelectValue>{m.role.charAt(0).toUpperCase() + m.role.slice(1)}</SelectValue>
+</SelectTrigger>
                             <SelectContent>
                               <SelectItem value="admin">
                                 <Badge variant="default" className="mr-2">Admin</Badge>
