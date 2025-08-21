@@ -9,6 +9,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableCap
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
+
 type Member = {
   user_id: string;
   role: "admin" | "member";
@@ -168,6 +169,8 @@ export default function MembersTable({
           </TableBody>
         </Table>
       </div>
+
+     
     </div>
   );
 }
