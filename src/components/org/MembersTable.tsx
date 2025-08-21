@@ -46,11 +46,12 @@ export default function MembersTable({
     }
   };
 
-  React.useEffect(() => {
+ React.useEffect(() => {
+  if (!initial || initial.length === 0) {
     fetchMembers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orgId]);
-
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [orgId]);
   // Count admins for self-demotion prevention
   const adminCount = members.filter((m) => m.role === "admin").length;
 
@@ -109,17 +110,20 @@ export default function MembersTable({
                   <td className="p-2">{m.email}</td>
                   <td className="p-2">
                     {isAdmin ? (
-                      <Select
+                      <select
                         value={m.role}
                         onChange={(e) =>
                           handleRoleChange(m.user_id, e.target.value as "admin" | "member")
                         }
                         disabled={isOnlyAdmin}
                         aria-label={`Change role for ${m.display_name}`}
+                        className="w-[160px] rounded-md border px-2 py-1 text-sm"
                       >
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="member">Member</SelectItem>
-                      </Select>
+                        <option value="admin">Admin</option>
+                        <option value="member">Member</option>
+                      </select>
+
+
                     ) : (
                       <span>{m.role}</span>
                     )}

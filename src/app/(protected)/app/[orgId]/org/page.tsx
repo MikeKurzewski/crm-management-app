@@ -33,23 +33,19 @@ export default async function OrgDetailsPage({
   const isAdmin = membership?.role === "admin";
 
   // Fetch members for the org (server-side, same as API)
-  const { data: members = [] } = await supabase
-    .from("organization_members")
-    .select(`
-      user_id,
-      role,
-      profiles:profiles(full_name, avatar_url),
-      auth_users:auth.users(email)
-    `)
+  // Fetch members for the org (server-side, same as API)
+  const { data: membersV = [], error: membersErr } = await supabase
+    .from("org_members_view")
+    .select("*")
     .eq("org_id", orgId);
 
-  // Map members to expected shape for MembersTable
-  const mappedMembers = (members || []).map((m: any) => ({
+  // Map to MembersTable shape (or pass membersV directly if your type matches)
+  const mappedMembers = (membersV || []).map((m: any) => ({
     user_id: m.user_id,
     role: m.role,
-    display_name: m.profiles?.full_name || m.auth_users?.email || "Unknown",
-    email: m.auth_users?.email || "",
-    avatar_url: m.profiles?.avatar_url || "",
+    display_name: m.display_name || "Unknown",
+    email: m.email || "",
+    avatar_url: m.avatar_url || "",
   }));
 
   if (orgError || !org) {

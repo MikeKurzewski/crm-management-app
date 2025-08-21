@@ -2,12 +2,18 @@
 
 A production-grade SaaS dashboard starter with **Auth**, **Organizations & Roles (RLS)**, **Invite-by-Email**, **Members management**, and a modern dashboard shell.
 
-- **Framework:** Next.js App Router (v15+)
-- **UI:** React, Tailwind v4, shadcn/ui
-- **Auth/DB:** Supabase (`@supabase/ssr`, RLS policies)
-- **Multi-tenant:** orgs + admin/member roles
-- **Invites:** admin creates link → invitee signs in → auto-joins org
-- **Members:** admins can manage roles, see all members, and manage invites
+---
+
+## Infrastructure & Stack
+
+- **Framework:** Next.js App Router (v15+), using Server and Client Components with async cookies()/params.
+- **UI:** React, Tailwind v4 (no eslint-plugin-tailwindcss), shadcn/ui (all UI is production-lean, accessible, and responsive).
+- **Database:** Supabase (Postgres) with Row Level Security (RLS) and custom RPCs for safe role management and invites.
+- **Auth:** Supabase Auth, with user profiles and organization membership.
+- **API:** Next.js Route Handlers for all org/member/invite endpoints, using @supabase/ssr for server-side Supabase clients.
+- **Migrations:** All schema and RPC changes are tracked in /supabase/migrations.
+- **No dynamic imports with ssr: false in Server Components.** All Client Components are statically imported.
+- **No function props are passed from Server → Client components.** Only serializable data is passed.
 
 ---
 
@@ -34,6 +40,7 @@ A production-grade SaaS dashboard starter with **Auth**, **Organizations & Roles
 - **Role Management:** admins can change any member’s role via a dropdown; last admin demotion is blocked (server and UI).
 - **Self-demotion:** UI disables changing own role if only one admin; server enforces last-admin safety.
 - **RLS:** all member queries and updates are protected by Row Level Security.
+- **API:** `/api/orgs/:id/members` GET returns all members with profile info; PUT changes a member's role via the set_member_role RPC.
 
 ### Invites Management
 
@@ -41,6 +48,7 @@ A production-grade SaaS dashboard starter with **Auth**, **Organizations & Roles
 - **Pending Invites:** lists all pending invites for the org, with email, role, created/expires, and a Copy link button for the join URL.
 - **Invite Flow:** after creating an invite, the list can be refreshed; once accepted, the invite disappears.
 - **Security:** only admins can create and view invites; backend and RPCs enforce admin checks.
+- **API:** `/api/orgs/:id/invites` GET returns pending invites for admins; `/api/invites` POST creates an invite (admin-only, calls create_org_invite RPC).
 
 ### Profile Editing
 
@@ -48,20 +56,20 @@ A production-grade SaaS dashboard starter with **Auth**, **Organizations & Roles
 - Updates `public.profiles` for the current user only.
 - On success: toast + redirect back to last visited org dashboard (or stay and show success).
 
-### Next.js 15 & Technical Guidelines
+---
 
-- All server code uses `await createClient()` and awaits async `cookies()`.
-- Dynamic route `params` are async and must be awaited in layouts/pages/route handlers.
-- **No dynamic imports with ssr: false in Server Components.** All Client Components are statically imported.
-- **No function props are passed from Server → Client components.** Only serializable data is passed.
-- **Tailwind v4** is used. **Do NOT add `eslint-plugin-tailwindcss`** (v3-only; conflicts with v4).
-- Use `@supabase/ssr` helpers for Next.js App Router.
-- Path alias: `@/*` → `./src/*` (see `tsconfig`).
-- Add more shadcn/ui components as needed:
-  ```bash
-  npx shadcn@latest add <component>
-  ```
-- All UI is built with shadcn/ui and Tailwind v4. Placeholders have been removed; all UI is production-lean.
+## Implementation Details
+
+- **Server code always awaits createClient() and dynamic route params.**
+- **All Client Components are statically imported in Server Components.**
+- **No function props are passed from Server → Client components.** All event handlers and navigation are handled inside Client Components.
+- **All forms and tables are accessible:** tabbable, submit on enter, aria-labels, and keyboard-friendly.
+- **Loading and error states:** All forms and tables show loading indicators and error toasts/messages.
+- **Supabase RLS and RPCs:** All sensitive actions (role change, invite creation) are enforced by RLS and custom RPCs (e.g., set_member_role prevents last admin demotion).
+- **Migrations:** All schema and RPC changes are tracked in /supabase/migrations, including:
+  - Initial orgs/roles/invites setup
+  - Dashboard metadata (org/profile fields)
+  - set_member_role RPC for safe role changes
 
 ---
 
