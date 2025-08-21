@@ -1,12 +1,13 @@
-# Supabase + Next.js (App Router) + Tailwind v4 + shadcn/ui — Dashboard Starter
+# Supabase + Next.js (App Router) + Tailwind v4 + shadcn/ui — Org Dashboard Starter
 
-A production-grade SaaS dashboard starter with **Auth**, **Organizations & Roles (RLS)**, **Invite-by-Email**, and a modern dashboard shell.
+A production-grade SaaS dashboard starter with **Auth**, **Organizations & Roles (RLS)**, **Invite-by-Email**, **Members management**, and a modern dashboard shell.
 
 - **Framework:** Next.js App Router (v15+)
 - **UI:** React, Tailwind v4, shadcn/ui
 - **Auth/DB:** Supabase (`@supabase/ssr`, RLS policies)
 - **Multi-tenant:** orgs + admin/member roles
 - **Invites:** admin creates link → invitee signs in → auto-joins org
+- **Members:** admins can manage roles, see all members, and manage invites
 
 ---
 
@@ -20,20 +21,28 @@ A production-grade SaaS dashboard starter with **Auth**, **Organizations & Roles
   - **Sidebar:** 
     - Org Switcher (combobox/select, disabled if only one org)
     - Profile section (avatar, full name, Edit profile button → `/app/profile`)
-    - Navigation: "My Organisation" → `/app/[orgId]/org` (room for future items)
+    - Navigation: "My Organisation" → `/app/[orgId]/org`, "Profile" → `/app/profile`
 - All routes are org-aware: `/app/[orgId]` is the dashboard home for the selected org.
 - Organisation page (`/app/[orgId]/org`):
-  - Admins see editable org details (name, description, logo URL) and InviteMemberForm.
-  - Members see read-only org details.
+  - Admins see editable org details (name, description, logo URL), InviteMemberForm, Members table, and Pending Invites.
+  - Members see read-only org details and the Members table.
 - Profile page (`/app/profile`): edit full name and avatar URL (self only).
 
-### Org Edit/Admin Behavior
+### Members Management
 
-- Only org admins can edit org details or invite members (UI and API enforced).
-- Members see org details read-only; no invite/edit UI.
-- API: `PUT /api/orgs/:id` updates org for admins; returns 403 for non-admins.
+- **Members Table:** lists all members with their roles (admin/member), name, email, and avatar.
+- **Role Management:** admins can change any member’s role via a dropdown; last admin demotion is blocked (server and UI).
+- **Self-demotion:** UI disables changing own role if only one admin; server enforces last-admin safety.
+- **RLS:** all member queries and updates are protected by Row Level Security.
 
-### Profile Edit Notes
+### Invites Management
+
+- **Invite Form:** admins can invite by email and select the invitee’s role (admin/member).
+- **Pending Invites:** lists all pending invites for the org, with email, role, created/expires, and a Copy link button for the join URL.
+- **Invite Flow:** after creating an invite, the list can be refreshed; once accepted, the invite disappears.
+- **Security:** only admins can create and view invites; backend and RPCs enforce admin checks.
+
+### Profile Editing
 
 - Profile page uses shadcn Form, Input, Button, zod + react-hook-form.
 - Updates `public.profiles` for the current user only.
@@ -43,6 +52,8 @@ A production-grade SaaS dashboard starter with **Auth**, **Organizations & Roles
 
 - All server code uses `await createClient()` and awaits async `cookies()`.
 - Dynamic route `params` are async and must be awaited in layouts/pages/route handlers.
+- **No dynamic imports with ssr: false in Server Components.** All Client Components are statically imported.
+- **No function props are passed from Server → Client components.** Only serializable data is passed.
 - **Tailwind v4** is used. **Do NOT add `eslint-plugin-tailwindcss`** (v3-only; conflicts with v4).
 - Use `@supabase/ssr` helpers for Next.js App Router.
 - Path alias: `@/*` → `./src/*` (see `tsconfig`).
@@ -50,20 +61,7 @@ A production-grade SaaS dashboard starter with **Auth**, **Organizations & Roles
   ```bash
   npx shadcn@latest add <component>
   ```
-- All UI is built with shadcn/ui and Tailwind v4. Placeholders are present for forms/components; replace with actual shadcn/ui code as needed.
-
-### Test Plan
-
-- Auth works; `/app` redirects to `/app/<firstOrgId>` when user has orgs.
-- Sidebar shows Org Switcher (multiple orgs) or a disabled single org.
-- Sidebar shows profile avatar/name and Edit profile button → `/app/profile`.
-- "My Organisation" nav goes to `/app/[orgId]/org`:
-  - Members see read-only org details.
-  - Admins see Org edit form and Invite members section.
-- `PUT /api/orgs/:id` updates org for admins; 403 for non-admins.
-- Profile page updates full_name, avatar_url for self only.
-- All server code awaits createClient(); dynamic route pages await params where required.
-- No usage of eslint-plugin-tailwindcss. Tailwind v4 UI renders correctly.
+- All UI is built with shadcn/ui and Tailwind v4. Placeholders have been removed; all UI is production-lean.
 
 ---
 
@@ -73,24 +71,28 @@ A production-grade SaaS dashboard starter with **Auth**, **Organizations & Roles
 /src
   /app
     /(public)
-      /signin/page.tsx         # tabs + next-param handling + emailRedirectTo
+      /signin/page.tsx
     /(protected)
-      /app/layout.tsx          # dashboard shell (Topbar, Sidebar, content)
-      /app/page.tsx            # redirects to /app/<firstOrgId> or shows NewOrgForm
-      /app/[orgId]/page.tsx    # org dashboard home
-      /app/[orgId]/org/page.tsx # org details (admin/member views)
-      /app/profile/page.tsx    # profile edit page
+      /app/layout.tsx
+      /app/page.tsx
+      /app/[orgId]/page.tsx
+      /app/[orgId]/org/page.tsx
+      /app/profile/page.tsx
     /api/health/route.ts
     /api/me/route.ts
-    /api/orgs/route.ts         # list/create org (RPC)
-    /api/orgs/[id]/route.ts    # GET org, PUT org (admin-only PUT)
-    /api/invites/route.ts      # create invite (admin-only, returns joinUrl)
-    /join/[token]/page.tsx     # await params; accept invite; redirect /app
+    /api/orgs/route.ts
+    /api/orgs/[id]/route.ts
+    /api/orgs/[id]/members/route.ts
+    /api/orgs/[id]/invites/route.ts
+    /api/invites/route.ts
+    /join/[token]/page.tsx
   /components
     /shell/Topbar.tsx
     /shell/Sidebar.tsx
     /org/OrgSwitcher.tsx
     /org/OrgForm.tsx
+    /org/MembersTable.tsx
+    /org/PendingInvitesList.tsx
     /nav/AppNav.tsx
     /profile/ProfileCard.tsx
     /profile/EditProfileForm.tsx
@@ -107,12 +109,17 @@ A production-grade SaaS dashboard starter with **Auth**, **Organizations & Roles
     NewOrgForm.tsx
     SignOutButton.tsx
   /lib/supabase
-    client.ts                  # browser client (createBrowserClient)
-    server.ts                  # server client (await cookies(), getAll/setAll)
+    client.ts
+    server.ts
   /app/globals.css
-/middleware.ts                 # (optional) extra guard; layout already protects
+/middleware.ts
 .env.example
-components.json                # shadcn config
+components.json
+/supabase
+  /migrations/
+    ..._init_orgs_roles_invites.sql
+    ..._dashboard_metadata.sql
+    ..._set_member_role.sql
 ```
 
 ---
@@ -131,6 +138,7 @@ components.json                # shadcn config
   * `create_org_with_admin(name) → org_id`
   * `create_org_invite(org_id, email, role?, expires_at?) → token`
   * `accept_org_invite(token) → org_id`
+  * `set_member_role(org_id, user_id, role)` — safe role change, prevents last admin demotion
 * `org_invites(token, org_id, email, role, invited_by, created_at, expires_at, accepted_at)`
   * **RLS:** admins of that org can read
 
@@ -146,6 +154,9 @@ components.json                # shadcn config
 * `POST /api/orgs` → `{ id }` (calls `create_org_with_admin`)
 * `GET /api/orgs/:id` → get org by id (RLS enforced)
 * `PUT /api/orgs/:id` → update org (admin-only; returns 403 for non-admins)
+* `GET /api/orgs/:id/members` → list org members with profile info (RLS enforced)
+* `PUT /api/orgs/:id/members` → change member role (admin-only, safe RPC)
+* `GET /api/orgs/:id/invites` → list pending invites (admin-only)
 * `POST /api/invites` → `{ token, joinUrl }` (admin-only; calls `create_org_invite`)
 
 ---
@@ -196,6 +207,26 @@ supabase db reset   # spin local DB and apply migrations
 * Add CRM tables (e.g., `leads`) with org_id, created_by, timestamps, RLS
 * Webhooks / background jobs via Route Handlers or edge functions
 * Role variants (viewer, billing_admin) or per-feature permissions
+
+---
+
+## Test Plan
+
+- Auth works; `/app` redirects to `/app/<firstOrgId>` when user has orgs.
+- If no orgs, user sees a clear empty state and can create an organization.
+- Sidebar shows Org Switcher (multiple orgs) or a disabled single org, with aria-label for accessibility.
+- Sidebar shows profile avatar/name and Edit profile button → `/app/profile`.
+- "My Organisation" nav goes to `/app/[orgId]/org`:
+  - Members see read-only org details and the Members table.
+  - Admins see Org edit form, Invite form (with role select), Members table (with role management), and Pending Invites.
+- All forms (OrgForm, EditProfileForm, InviteMemberForm) show loading states, error toasts, and are accessible (tabbable, submit on enter).
+- Members table allows admins to change roles, blocks last admin demotion, and persists changes to the backend.
+- Pending invites appear with a Copy link action; once accepted, they disappear on refresh.
+- All server code awaits createClient(); dynamic route pages await params where required.
+- No dynamic imports with ssr: false in Server Components; all Client Components are statically imported.
+- No function props are passed from Server → Client components; only serializable data is passed.
+- No usage of eslint-plugin-tailwindcss. Tailwind v4 UI renders correctly.
+- No obvious placeholders remain; all UI is production-lean.
 
 ---
 

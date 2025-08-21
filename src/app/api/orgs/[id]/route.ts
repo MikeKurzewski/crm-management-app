@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-// GET: return org by id (RLS will restrict access to members)
+// GET: return org metadata (RLS restricts to members)
 // PUT: update org (admin-only)
 
 export async function GET(
@@ -11,15 +11,15 @@ export async function GET(
   const { id } = await params;
   const supabase = await createClient();
 
-  // Fetch org by id (RLS enforced)
+  // Fetch org metadata (RLS enforced)
   const { data: org, error } = await supabase
     .from("organizations")
-    .select("*")
+    .select("id, name, description, logo_url")
     .eq("id", id)
     .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 404 });
+  if (error || !org) {
+    return NextResponse.json({ error: error?.message || "Not found" }, { status: 404 });
   }
 
   return NextResponse.json(org);
@@ -35,7 +35,7 @@ export async function PUT(
   // Check if user is admin for this org
   const { data: { user } = {} } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    return NextResponse.json({ error: "Not authorized" }, { status: 403 });
   }
   const { data: membership } = await supabase
     .from("organization_members")
@@ -44,7 +44,7 @@ export async function PUT(
     .eq("user_id", user.id)
     .single();
   if (membership?.role !== "admin") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Not authorized" }, { status: 403 });
   }
 
   // Parse body
@@ -56,12 +56,12 @@ export async function PUT(
     .from("organizations")
     .update({ name, description, logo_url })
     .eq("id", id)
-    .select()
+    .select("id")
     .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+  if (error || !updated) {
+    return NextResponse.json({ error: error?.message || "Update failed" }, { status: 400 });
   }
 
-  return NextResponse.json(updated);
+  return NextResponse.json({ id: updated.id });
 }

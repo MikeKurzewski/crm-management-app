@@ -20,8 +20,11 @@ export default async function AppPage() {
   // No orgs: show empty state (NewOrgForm)
   return (
     <main className="flex min-h-screen items-center justify-center">
+      {/* If NewOrgForm is available, render it here */}
       {/* <NewOrgForm /> */}
-      <div className="text-muted-foreground">No organizations found. NewOrgForm coming soon.</div>
+      <div className="text-muted-foreground">
+        No organizations found. Please create an organization to get started.
+      </div>
     </main>
   );
 }

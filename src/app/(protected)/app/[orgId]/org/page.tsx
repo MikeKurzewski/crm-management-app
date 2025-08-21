@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
-// import OrgForm from "@/components/org/OrgForm";
-// import InviteMemberForm from "@/components/InviteMemberForm";
+import MembersTable from "@/components/org/MembersTable";
+import PendingInvitesList from "@/components/org/PendingInvitesList";
+import OrgForm from "@/components/org/OrgForm";
+import InviteMemberForm from "@/components/InviteMemberForm";
 
 export default async function OrgDetailsPage({
   params,
@@ -10,7 +12,7 @@ export default async function OrgDetailsPage({
   const { orgId } = await params;
   const supabase = await createClient();
 
-  // Fetch org by id
+  // Fetch org fields
   const { data: org, error: orgError } = await supabase
     .from("organizations")
     .select("id, name, description, logo_url")
@@ -29,6 +31,26 @@ export default async function OrgDetailsPage({
     .single();
 
   const isAdmin = membership?.role === "admin";
+
+  // Fetch members for the org (server-side, same as API)
+  const { data: members = [] } = await supabase
+    .from("organization_members")
+    .select(`
+      user_id,
+      role,
+      profiles:profiles(full_name, avatar_url),
+      auth_users:auth.users(email)
+    `)
+    .eq("org_id", orgId);
+
+  // Map members to expected shape for MembersTable
+  const mappedMembers = (members || []).map((m: any) => ({
+    user_id: m.user_id,
+    role: m.role,
+    display_name: m.profiles?.full_name || m.auth_users?.email || "Unknown",
+    email: m.auth_users?.email || "",
+    avatar_url: m.profiles?.avatar_url || "",
+  }));
 
   if (orgError || !org) {
     return (
@@ -52,14 +74,21 @@ export default async function OrgDetailsPage({
       </div>
       {isAdmin ? (
         <div>
-          {/* <OrgForm org={org} /> */}
-          <div className="mb-6 text-muted-foreground">Org edit form coming soon</div>
-          {/* <InviteMemberForm orgs={[{id: orgId, name: org.name}]} adminOrgIds={[orgId]} /> */}
-          <div className="text-muted-foreground">InviteMemberForm coming soon</div>
+          <OrgForm org={org} />
+          <div className="mt-8">
+            <InviteMemberForm orgs={[{ id: orgId, name: org.name }]} adminOrgIds={[orgId]} />
+          </div>
         </div>
       ) : (
         <div className="text-muted-foreground">You are a member of this organization.</div>
       )}
+      <MembersTable
+        orgId={orgId}
+        initial={mappedMembers}
+        isAdmin={isAdmin}
+        currentUserId={user?.id || ""}
+      />
+      {isAdmin && <PendingInvitesList orgId={orgId} />}
     </div>
   );
 }

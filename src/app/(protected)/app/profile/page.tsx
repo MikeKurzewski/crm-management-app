@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-// import EditProfileForm from "@/components/profile/EditProfileForm";
+import EditProfileForm from "@/components/profile/EditProfileForm";
 
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -17,8 +17,7 @@ export default async function ProfilePage() {
   return (
     <div className="p-8 max-w-lg mx-auto">
       <h1 className="text-2xl font-bold mb-4">Edit Profile</h1>
-      {/* <EditProfileForm profile={profile} /> */}
-      <div className="text-muted-foreground">Profile edit form coming soon.</div>
+      <EditProfileForm profile={profile || { id: user?.id || "" }} />
     </div>
   );
 }

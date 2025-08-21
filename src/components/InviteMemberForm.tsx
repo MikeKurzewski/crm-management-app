@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectItem } from "@/components/ui/select";
+import { toast } from "sonner";
 
 type Org = { id: string; name: string };
 
@@ -13,81 +15,81 @@ export default function InviteMemberForm({
   orgs: Org[];
   adminOrgIds: string[];
 }) {
-  const adminOrgs = orgs.filter((o) => adminOrgIds.includes(o.id));
+  // Compute intersection of orgs and adminOrgIds
+  const selectableOrgs = orgs.filter((org) => adminOrgIds.includes(org.id));
+  const [selectedOrgId] = selectableOrgs.length > 0 ? [selectableOrgs[0].id] : [""];
+  const [email, setEmail] = React.useState("");
+  const [role, setRole] = React.useState<"admin" | "member">("member");
+  const [loading, setLoading] = React.useState(false);
+  const [inviteUrl, setInviteUrl] = React.useState<string | null>(null);
 
-  // If somehow rendered with no admin orgs, show nothing (parent also guards)
-  if (adminOrgs.length === 0) return null;
-
-  const [email, setEmail] = useState("");
-  const [role, setRole] = useState<"admin" | "member">("member");
-  const [orgId, setOrgId] = useState(adminOrgs[0]?.id ?? "");
-  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setErr(null);
-    setInviteUrl(null);
-
-    const res = await fetch("/api/invites", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orgId: orgId || adminOrgs[0]?.id, email, role }),
-    });
-    const json = await res.json();
-    setBusy(false);
-
-    if (!res.ok) return setErr(json.error || "Failed to create invite");
-
-    setInviteUrl(json.joinUrl);
-    setEmail("");
+  if (selectableOrgs.length === 0) {
+    return null;
   }
 
-  return (
-    <div className="space-y-2">
-      {adminOrgs.length > 1 && (
-        <select
-          className="border rounded px-2 py-1"
-          value={orgId}
-          onChange={(e) => setOrgId(e.target.value)}
-        >
-          {adminOrgs.map((o) => (
-            <option key={o.id} value={o.id}>{o.name}</option>
-          ))}
-        </select>
-      )}
+  const handleInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setInviteUrl(null);
+    try {
+      const res = await fetch("/api/invites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orgId: selectedOrgId,
+          email,
+          role,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.joinUrl) {
+        setInviteUrl(data.joinUrl);
+        setEmail("");
+        toast.success("Invite created!");
+      } else {
+        toast.error(data.error || "Failed to create invite");
+      }
+    } catch (e) {
+      toast.error("Network error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      <form onSubmit={onSubmit} className="flex items-center gap-2">
+  return (
+    <form onSubmit={handleInvite} className="space-y-2">
+      <div>
+        <label className="block text-sm font-medium mb-1">Invite by email</label>
         <Input
           type="email"
-          placeholder="teammate@company.com"
+          placeholder="user@example.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
         />
-        <select
-          className="border rounded px-2 py-2"
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-1">Role</label>
+        <Select
           value={role}
           onChange={(e) => setRole(e.target.value as "admin" | "member")}
+          aria-label="Invite role"
         >
-          <option value="member">Member</option>
-          <option value="admin">Admin</option>
-        </select>
-        <Button type="submit" disabled={busy}>
-          {busy ? "Inviting..." : "Invite"}
-        </Button>
-      </form>
-
+          <SelectItem value="member">Member</SelectItem>
+          <SelectItem value="admin">Admin</SelectItem>
+        </Select>
+      </div>
+      <Button type="submit" disabled={loading || !email}>
+        {loading ? "Inviting..." : "Send Invite"}
+      </Button>
       {inviteUrl && (
-        <div className="text-sm">
-          Invite link created:{" "}
-          <a className="underline" href={inviteUrl}>{inviteUrl}</a>
-          <span className="ml-2 text-zinc-500">(share with the invitee)</span>
+        <div className="mt-2 text-sm">
+          <span className="font-medium">Invite link:</span>{" "}
+          <a href={inviteUrl} target="_blank" rel="noopener noreferrer" className="underline text-blue-600">
+            {inviteUrl}
+          </a>
         </div>
       )}
-      {err && <p className="text-sm text-red-600">{err}</p>}
-    </div>
+    </form>
   );
 }
